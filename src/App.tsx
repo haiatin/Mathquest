@@ -18,28 +18,36 @@ import { useGameStore } from './stores/gameStore';
 import type { HintLevel } from './types';
 
 function App() {
-  const {
-    userProfile,
-    createProfile,
-    currentPuzzle,
-    setCurrentPuzzle,
-    completePuzzle,
-    currentLevel,
-    advanceToNextLevel,
-  } = useGameStore();
+  const hasHydrated = useGameStore((state) => state._hasHydrated);
+  const userProfile = useGameStore((state) => state.userProfile);
+  const createProfile = useGameStore((state) => state.createProfile);
+  const currentPuzzle = useGameStore((state) => state.currentPuzzle);
+  const setCurrentPuzzle = useGameStore((state) => state.setCurrentPuzzle);
+  const completePuzzle = useGameStore((state) => state.completePuzzle);
+  const currentLevel = useGameStore((state) => state.currentLevel);
+  const advanceToNextLevel = useGameStore((state) => state.advanceToNextLevel);
 
   const [showWelcome, setShowWelcome] = useState(!userProfile);
   const [playerName, setPlayerName] = useState('');
   const [showBarModel, setShowBarModel] = useState(false);
 
   /**
+   * Update welcome screen when hydration completes
+   */
+  useEffect(() => {
+    if (hasHydrated) {
+      setShowWelcome(!userProfile);
+    }
+  }, [hasHydrated, userProfile]);
+
+  /**
    * Initialize first puzzle when user profile created
    */
   useEffect(() => {
-    if (userProfile && !currentPuzzle) {
+    if (hasHydrated && userProfile && !currentPuzzle) {
       startNewPuzzle(1);
     }
-  }, [userProfile, currentPuzzle]);
+  }, [hasHydrated, userProfile, currentPuzzle]);
 
   /**
    * Start a new puzzle
@@ -112,6 +120,18 @@ function App() {
       setShowBarModel(true);
     }
   };
+
+  // Wait for hydration
+  if (!hasHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="loading-spinner mx-auto mb-4" />
+          <p className="text-xl text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Welcome Screen
   if (showWelcome) {
