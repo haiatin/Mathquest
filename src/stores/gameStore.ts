@@ -9,7 +9,7 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   Puzzle,
   UserProfile,
@@ -20,6 +20,10 @@ import type {
 } from '../types';
 
 interface GameStore {
+  // Hydration state
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
+
   // User Profile
   userProfile: UserProfile | null;
   createProfile: (name: string, age?: number) => void;
@@ -71,6 +75,12 @@ const initialSkills: SkillPillars = {
 export const useGameStore = create<GameStore>()(
   persist(
     (set, get) => ({
+      // Hydration state
+      _hasHydrated: false,
+      setHasHydrated: (state) => {
+        set({ _hasHydrated: state });
+      },
+
       // User Profile
       userProfile: null,
 
@@ -249,7 +259,9 @@ export const useGameStore = create<GameStore>()(
         }));
 
         // Apply accessibility changes to DOM
-        applyAccessibilityToDOM(get().accessibilityPrefs);
+        if (typeof window !== 'undefined') {
+          applyAccessibilityToDOM(get().accessibilityPrefs);
+        }
       },
 
       // Progression
@@ -264,6 +276,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: 'mathquest-storage', // localStorage key
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         userProfile: state.userProfile,
         puzzleHistory: state.puzzleHistory,
@@ -271,6 +284,9 @@ export const useGameStore = create<GameStore>()(
         currentLevel: state.currentLevel,
         currentWorld: state.currentWorld,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
@@ -279,6 +295,8 @@ export const useGameStore = create<GameStore>()(
  * Apply accessibility preferences to DOM
  */
 function applyAccessibilityToDOM(prefs: AccessibilityPreferences): void {
+  if (typeof window === 'undefined') return;
+  
   const body = document.body;
 
   // Dyslexia mode
